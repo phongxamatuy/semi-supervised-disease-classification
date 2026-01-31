@@ -1,0 +1,1053 @@
+<!-- 
+FILE: templates/index.html
+Lưu file này trong thư mục 'templates' cùng cấp với app.py
+-->
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏥 Chest X-ray Classifier</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: slideUp 0.6s ease-out;
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+            transform: scale(1.02);
+        }
+
+        .upload-area.drag-over {
+            border-color: #764ba2;
+            background: #e8ecff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #333;
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+
+        .upload-text small {
+            color: #999;
+            display: block;
+            margin-top: 10px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        #preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        /* Results Section */
+        .results-container {
+            display: none;
+        }
+
+        .detected-count {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .detected-diseases {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            min-height: 60px;
+        }
+
+        .detected-diseases h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .disease-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .disease-badge:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .disease-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .disease-item:hover {
+            background: #f0f2ff;
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .disease-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .disease-name::after {
+            content: " ℹ️";
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+
+        .disease-probability {
+            text-align: right;
+        }
+
+        .probability-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .probability-bar {
+            width: 200px;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .probability-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.5s ease;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow: hidden;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.4s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.6em;
+        }
+
+        .close {
+            color: white;
+            font-size: 35px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            line-height: 1;
+        }
+
+        .close:hover {
+            transform: scale(1.2);
+            color: #ffebee;
+        }
+
+        .modal-body {
+            padding: 30px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-body h3 {
+            color: #667eea;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+        }
+
+        .modal-body h3:first-child {
+            margin-top: 0;
+        }
+
+        .modal-body p {
+            line-height: 1.7;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .modal-body ul {
+            margin-left: 20px;
+            line-height: 1.8;
+            color: #555;
+        }
+
+        .modal-body ul li {
+            margin-bottom: 8px;
+        }
+
+        .info-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .info-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .warning-box strong {
+            color: #856404;
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Messages */
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+            border-left: 4px solid #c62828;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+            border-left: 4px solid #2e7d32;
+        }
+
+        /* Animations */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            opacity: 0.8;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-wrapper {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .probability-bar {
+                width: 100px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 10% auto;
+            }
+
+            .modal-header {
+                padding: 20px;
+            }
+
+            .modal-header h2 {
+                font-size: 1.3em;
+            }
+
+            .modal-body {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🏥 Chest X-ray Disease Classifier</h1>
+            <p>Phân loại bệnh tự động từ ảnh X-quang ngực sử dụng AI</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-wrapper">
+            <!-- Upload Section -->
+            <div class="card">
+                <h2>📤 Upload images</h2>
+
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">
+                        Kéo thả ảnh vào đây hoặc click để chọn
+                        <small>Hỗ trợ: JPG, PNG, BMP, GIF (tối đa 16MB)</small>
+                    </div>
+                </div>
+
+                <input type="file" id="fileInput" accept="image/*">
+                <img id="preview" alt="Preview">
+
+                <div class="button-group">
+                    <button class="btn-primary" id="uploadBtn">📤 Chọn Ảnh</button>
+                    <button class="btn-secondary" id="analyzeBtn" disabled>🔍 Phân Tích</button>
+                </div>
+
+                <div class="error" id="errorMsg"></div>
+                <div class="success" id="successMsg"></div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="card">
+                <h2>📊 Kết quả dự đoán</h2>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 15px;">Đang phân tích ảnh...</p>
+                </div>
+
+                <div class="results-container" id="resultsContainer">
+                    <div class="detected-count">
+                        Phát hiện <span id="detectedCount">0</span> bệnh
+                    </div>
+
+                    <div class="detected-diseases" id="detectedDiseases">
+                        <h3>🔴 Bệnh Được Phát Hiện</h3>
+                    </div>
+
+                    <div id="allResults"></div>
+                </div>
+
+                <div style="text-align: center; color: #999; margin-top: 20px;" id="noResults">
+                    📝 Tải lên ảnh để xem kết quả
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p>⚠️ Công cụ này chỉ dùng cho mục đích giáo dục. Không sử dụng thay thế chẩn đoán y tế chuyên nghiệp.</p>
+        </footer>
+    </div>
+
+    <!-- Modal -->
+    <div id="diseaseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Tên bệnh</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Nội dung sẽ được điền bằng JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const preview = document.getElementById('preview');
+        const loading = document.getElementById('loading');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const errorMsg = document.getElementById('errorMsg');
+        const successMsg = document.getElementById('successMsg');
+        const noResults = document.getElementById('noResults');
+        const modal = document.getElementById('diseaseModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBody = document.getElementById('modalBody');
+        const closeBtn = document.getElementsByClassName('close')[0];
+
+        let selectedFile = null;
+
+        // ============================================================================
+        // THÔNG TIN BỆNH - BẠN CÓ THỂ CHỈNH SỬA Ở ĐÂY
+        // ============================================================================
+        const diseaseInfo = {
+            'Atelectasis': {
+                name_vi: 'Xẹp phổi',
+                description: 'Xẹp phổi là tình trạng một phần hoặc toàn bộ phổi bị xẹp xuống hoặc không có không khí.',
+                symptoms: [
+                    'Khó thở',
+                    'Ho khan',
+                    'Thở nhanh, nông',
+                    'Đau ngực khi hít thở sâu'
+                ],
+                causes: [
+                    'Tắc nghẽn đường thở',
+                    'Chấn thương ngực',
+                    'Khối u ép phổi',
+                    'Sau phẫu thuật'
+                ],
+                treatment: 'Điều trị phụ thuộc vào nguyên nhân: vật lý trị liệu hô hấp, dùng thuốc giãn phế quản, hoặc phẫu thuật nếu cần.',
+                link: 'https://test-web.medlatec.vn/tin-tuc/xep-phoi-la-gi-nguyen-nhan-trieu-chung-va-cach-dieu-tri-s64-n28105?gad_source=1&gad_campaignid=23448904708&gbraid=0AAAAADN9HXzZY4GlXYXGRHD6ujxQKnEgZ&gclid=Cj0KCQiAp-zLBhDkARIsABcYc6sW31Wv9taQslSAIDd98AbB2tF5Kg9UUrm4umo_KKTeiEXfczYK1eUaAvqtEALw_wcB'
+            },
+            'Consolidation': {
+                name_vi: 'Đông đặc phổi',
+                description: 'Đông đặc phổi là tình trạng các túi khí trong phổi (phế nang) bị đầy dịch hoặc mô rắn thay vì không khí.',
+                symptoms: [
+                    'Ho có đờm',
+                    'Sốt cao',
+                    'Khó thở',
+                    'Đau ngực khi hít thở'
+                ],
+                causes: [
+                    'Viêm phổi',
+                    'Nhiễm trùng',
+                    'Phù phổi',
+                    'Xuất huyết phổi'
+                ],
+                treatment: 'Điều trị bằng kháng sinh cho nhiễm khuẩn, thuốc chống viêm, và hỗ trợ oxy nếu cần.',
+                link: 'https://medlatec.vn/tin-tuc/hoi-chung-dong-dac-phoi-nguyen-nhan-trieu-chung-va-cach-dieu-tri-hieu-qua?gad_source=1&gad_campaignid=23448904708&gbraid=0AAAAADN9HXzZY4GlXYXGRHD6ujxQKnEgZ&gclid=Cj0KCQiAp-zLBhDkARIsABcYc6viOMNx8RhaQg9KPFzP2h7Dx02NsJ5ZXCnJnhE_Hpc2KHZJ1ZjJvcsaAh8wEALw_wcB'
+            },
+            'Infiltration': {
+                name_vi: 'Thâm nhiễm phổi',
+                description: 'Thâm nhiễm phổi là sự xuất hiện của chất lỏng, tế bào hoặc vật chất khác trong mô phổi.',
+                symptoms: [
+                    'Ho kéo dài',
+                    'Khó thở',
+                    'Sốt nhẹ',
+                    'Mệt mỏi'
+                ],
+                causes: [
+                    'Nhiễm trùng',
+                    'Viêm',
+                    'Ung thư',
+                    'Bệnh tự miễn'
+                ],
+                treatment: 'Điều trị nguyên nhân gốc rễ: kháng sinh, thuốc chống viêm, hoặc hóa trị nếu do ung thư.',
+                link: 'https://medlatec.vn/tin-tuc/tham-nhiem-phoi-co-nguy-hiem-khong-nguyen-nhan-do-dau'
+            },
+            'Pneumothorax': {
+                name_vi: 'Tràn khí màng phổi',
+                description: 'Tràn khí màng phổi là tình trạng không khí tích tụ trong khoang màng phổi, làm phổi xẹp.',
+                symptoms: [
+                    'Đau ngực đột ngột, dữ dội',
+                    'Khó thở nặng',
+                    'Nhịp tim nhanh',
+                    'Ho khan'
+                ],
+                causes: [
+                    'Chấn thương ngực',
+                    'Bệnh phổi mạn tính',
+                    'Tự phát (không rõ nguyên nhân)',
+                    'Biến chứng thủ thuật y tế'
+                ],
+                treatment: 'Cấp cứu bằng cách hút khí ra ngoài qua kim hoặc ống dẫn lưu. Trường hợp nặng cần phẫu thuật.',
+                link: 'https://medlatec.vn/tin-tuc/tran-khi-mang-phoi-nguyen-nhan-trieu-chung-va-cach-dieu-tri-s64-n21724?gad_source=1&gad_campaignid=23448904708&gbraid=0AAAAADN9HXzZY4GlXYXGRHD6ujxQKnEgZ&gclid=Cj0KCQiAp-zLBhDkARIsABcYc6trKI0ZxJCkFBnMcPv6See9oVFNKYBhvB4uANPfrvmBFQ0XnaA287QaAs1REALw_wcB'
+            },
+            'Edema': {
+                name_vi: 'Phù phổi',
+                description: 'Phù phổi là tình trạng dịch tích tụ trong các túi khí của phổi, gây khó thở.',
+                symptoms: [
+                    'Khó thở nặng, đặc biệt khi nằm',
+                    'Ho ra máu hoặc bọt hồng',
+                    'Thở khò khè',
+                    'Đổ mồ hôi nhiều'
+                ],
+                causes: [
+                    'Suy tim',
+                    'Chấn thương ngực',
+                    'Nhiễm trùng nặng',
+                    'Độ cao lớn'
+                ],
+                treatment: 'Cấp cứu bằng oxy, thuốc lợi tiểu, và điều trị nguyên nhân tim mạch.',
+                link: 'https://medlatec.vn/tin-tuc/nguyen-nhan-dan-den-phu-phoi-cap-va-cach-dieu-tri-benh-s64-n22273'
+            },
+            'Emphysema': {
+                name_vi: 'Khí phế thũng phổi',
+                description: 'Khí phế thũng phổi là bệnh phổi mạn tính làm hư hại các túi khí (phế nang), gây khó thở.',
+                symptoms: [
+                    'Khó thở khi gắng sức',
+                    'Ho mạn tính',
+                    'Khò khè',
+                    'Giảm cân không rõ nguyên nhân'
+                ],
+                causes: [
+                    'Hút thuốc lá (nguyên nhân chính)',
+                    'Ô nhiễm không khí',
+                    'Thiếu hụt alpha-1 antitrypsin',
+                    'Tiếp xúc với hóa chất độc hại'
+                ],
+                treatment: 'Cai thuốc lá, thuốc giãn phế quản, phục hồi chức năng phổi, oxy liệu pháp.',
+                link: 'https://medlatec.vn/tin-tuc/khi-phe-thung-la-gi-nguyen-nhan-va-dau-hieu-dien-hinh-cua-benh-s64-n24053'
+            },
+            'Fibrosis': {
+                name_vi: 'Xơ hóa phổi',
+                description: 'Xơ hóa phổi là quá trình mô phổi bị tổn thương và để lại scar (mô sẹo), làm cứng phổi.',
+                symptoms: [
+                    'Khó thở tiến triển',
+                    'Ho khan kéo dài',
+                    'Mệt mỏi',
+                    'Giảm cân'
+                ],
+                causes: [
+                    'Tiếp xúc lâu dài với bụi, khói',
+                    'Bệnh tự miễn',
+                    'Nhiễm trùng',
+                    'Một số loại thuốc'
+                ],
+                treatment: 'Không có thuốc chữa khỏi. Điều trị giảm triệu chứng: thuốc chống xơ hóa, oxy liệu pháp, ghép phổi.',
+                link: 'https://medlatec.vn/tin-tuc/xo-hoa-phoi-nguyen-nhan-do-dau-phuong-phap-phong-tranh-va-dieu-tri-benh'
+            },
+            'Effusion': {
+                name_vi: 'Tràn dịch màng phổi',
+                description: 'Tràn dịch màng phổi là tình trạng dịch tích tụ quá mức trong khoang màng phổi.',
+                symptoms: [
+                    'Đau ngực',
+                    'Khó thở',
+                    'Ho khô',
+                    'Sốt (nếu do nhiễm trùng)'
+                ],
+                causes: [
+                    'Suy tim',
+                    'Viêm phổi',
+                    'Ung thư',
+                    'Bệnh gan, thận'
+                ],
+                treatment: 'Chọc hút dịch, điều trị nguyên nhân, có thể cần đặt ống dẫn lưu.',
+                link: 'https://medlatec.vn/tin-tuc/tong-hop-5-nguyen-nhan-tran-dich-mang-phoi'
+            },
+            'Pneumonia': {
+                name_vi: 'Viêm phổi',
+                description: 'Viêm phổi là nhiễm trùng làm viêm các túi khí trong một hoặc cả hai phổi.',
+                symptoms: [
+                    'Ho có đờm vàng, xanh hoặc có máu',
+                    'Sốt cao, ớn lạnh',
+                    'Khó thở',
+                    'Đau ngực khi thở hoặc ho'
+                ],
+                causes: [
+                    'Vi khuẩn',
+                    'Virus',
+                    'Nấm',
+                    'Hít phải thức ăn, nước bọt'
+                ],
+                treatment: 'Kháng sinh cho viêm phổi do vi khuẩn, thuốc hạ sốt, nghỉ ngơi và uống nhiều nước.',
+                link: 'https://medlatec.vn/tin-tuc/benh-viem-phoi-co-lay-khong-phong-tranh-benh-bang-cach-nao'
+            },
+            'Pleural_Thickening': {
+                name_vi: 'Dày màng phổi',
+                description: 'Dày màng phổi là tình trạng màng phổi (lá thành) bị dày lên do viêm hoặc sẹo.',
+                symptoms: [
+                    'Khó thở nhẹ',
+                    'Đau ngực tù',
+                    'Ho',
+                    'Giảm khả năng vận động'
+                ],
+                causes: [
+                    'Tiếp xúc với amiăng',
+                    'Nhiễm trùng màng phổi',
+                    'Chấn thương ngực',
+                    'Bệnh tự miễn'
+                ],
+                treatment: 'Không có điều trị đặc hiệu. Giảm triệu chứng bằng thuốc giảm đau, vật lý trị liệu.',
+                link: 'https://medlatec.vn/tin-tuc/benh-day-dinh-mang-phoi-nguyen-nhan-muc-do-nguy-hiem-va-phuong-phap-dieu-tri-2'
+            },
+            'Cardiomegaly': {
+                name_vi: 'Tim to',
+                description: 'Tim to là tình trạng tim có kích thước lớn hơn bình thường trên ảnh X-quang.',
+                symptoms: [
+                    'Khó thở',
+                    'Phù chân',
+                    'Mệt mỏi',
+                    'Đánh trống ngực'
+                ],
+                causes: [
+                    'Tăng huyết áp',
+                    'Bệnh van tim',
+                    'Bệnh cơ tim',
+                    'Thiếu máu mạn tính'
+                ],
+                treatment: 'Điều trị nguyên nhân: thuốc hạ huyết áp, thuốc lợi tiểu, phẫu thuật van tim nếu cần.',
+                link: 'https://medlatec.vn/tin-tuc/giai-dap-thac-mac-benh-tim-to-co-nguy-hiem-khong-s63-n23877'
+            },
+            'Nodule': {
+                name_vi: 'Nốt phổi',
+                description: 'Nốt phổi là khối bất thường nhỏ, tròn hoặc hơi tròn trong phổi, thường phát hiện tình cờ.',
+                symptoms: [
+                    'Thường không có triệu chứng',
+                    'Ho (nếu nốt lớn)',
+                    'Ho ra máu (hiếm)',
+                    'Khó thở (nếu nốt lớn)'
+                ],
+                causes: [
+                    'Nhiễm trùng cũ',
+                    'Lành tính (u hạt)',
+                    'Ung thư phổi',
+                    'Di căn từ nơi khác'
+                ],
+                treatment: 'Theo dõi bằng CT scan định kỳ. Sinh thiết hoặc phẫu thuật nếu nghi ngờ ác tính.',
+                link: 'https://bvnguyentriphuong.com.vn/noi-ho-hap/nhung-dieu-can-biet-ve-cac-not-phoi'
+            },
+            'Mass': {
+                name_vi: 'Khối u phổi',
+                description: 'Khối u phổi là khối bất thường lớn hơn 3cm trong phổi, cần được đánh giá kỹ.',
+                symptoms: [
+                    'Ho kéo dài',
+                    'Ho ra máu',
+                    'Đau ngực',
+                    'Sụt cân không rõ nguyên nhân'
+                ],
+                causes: [
+                    'Ung thư phổi',
+                    'U lành tính',
+                    'Di căn',
+                    'Nhiễm trùng mạn tính'
+                ],
+                treatment: 'Cần sinh thiết để xác định. Điều trị tùy theo tính chất: phẫu thuật, hóa trị, xạ trị.',
+                link: 'https://medlatec.vn/tin-tuc/u-phoi-dau-hieu-nguyen-nhan-va-bien-phap-dieu-tri-s64-n31194'
+            },
+            'Hernia': {
+                name_vi: 'Thoát vị hoành',
+                description: 'Thoát vị hoành là tình trạng một phần cơ quan ổ bụng lồi qua lỗ bất thường ở cơ hoành.',
+                symptoms: [
+                    'Ợ hơi, ợ chua',
+                    'Khó nuốt',
+                    'Đau ngực',
+                    'Khó thở (nếu nặng)'
+                ],
+                causes: [
+                    'Bẩm sinh',
+                    'Chấn thương',
+                    'Áp lực trong ổ bụng tăng',
+                    'Yếu cơ hoành'
+                ],
+                treatment: 'Thuốc giảm acid. Phẫu thuật nếu triệu chứng nặng hoặc có biến chứng.',
+                link: 'https://tamanhhospital.vn/benh/thoat-vi-hoanh/'
+            }
+        };
+
+        // ============================================================================
+        // EVENT LISTENERS
+        // ============================================================================
+
+        // Upload button
+        uploadBtn.addEventListener('click', () => fileInput.click());
+
+        // File input
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) handleFileSelect(file);
+        });
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFileSelect(file);
+        });
+
+        // Close modal
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        function handleFileSelect(file) {
+            selectedFile = file;
+            
+            // Preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+            
+            analyzeBtn.disabled = false;
+            hideError();
+        }
+
+        // Analyze button
+        analyzeBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            loading.style.display = 'block';
+            resultsContainer.style.display = 'none';
+            noResults.style.display = 'none';
+            hideError();
+
+            try {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Response:', response);
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    console.error('Server error:', error);
+                    throw new Error('Lỗi kết nối: ' + error);
+                }
+                const data = await response.json();
+               
+                displayResults(data);
+                showSuccess('Phân tích thành công!');
+
+            } catch (error) {
+                showError('Lỗi: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+
+        function displayResults(data) {
+            const detected = data.detected_diseases;
+            const all = data.all_predictions;
+
+            document.getElementById('detectedCount').textContent = data.num_detected;
+
+            // Detected diseases
+            let detectedHTML = '<h3>🔴 Bệnh Được Phát Hiện</h3>';
+            if (detected.length > 0) {
+                detected.forEach(d => {
+                    detectedHTML += `<span class="disease-badge" onclick="showDiseaseInfo('${d.disease_en}')">${d.disease_vi} (${d.percentage.toFixed(1)}%)</span>`;
+                });
+            } else {
+                detectedHTML = '<p style="color: #2e7d32; font-weight: 600;">✅ Không phát hiện bệnh đáng kể</p>';
+            }
+            document.getElementById('detectedDiseases').innerHTML = detectedHTML;
+
+            // All predictions
+            let resultsHTML = '';
+            all.forEach((d, index) => {
+                const fillPercent = d.probability * 100;
+                resultsHTML += `
+                    <div class="disease-item" onclick="showDiseaseInfo('${d.disease_en}')">
+                        <div>
+                            <div class="disease-name">${index + 1}. ${d.disease_vi}</div>
+                            <div class="probability-bar">
+                                <div class="probability-fill" style="width: ${fillPercent}%"></div>
+                            </div>
+                        </div>
+                        <div class="disease-probability">
+                            <div class="probability-value">${d.percentage.toFixed(1)}%</div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('allResults').innerHTML = resultsHTML;
+
+            resultsContainer.style.display = 'block';
+            noResults.style.display = 'none';
+        }
+
+        // ============================================================================
+        // HIỂN THỊ THÔNG TIN BỆNH
+        // ============================================================================
+        function showDiseaseInfo(diseaseKey) {
+            const info = diseaseInfo[diseaseKey];
+            if (!info) {
+                alert('Thông tin bệnh chưa có!');
+                return;
+            }
+
+            modalTitle.textContent = `${info.name_vi} (${diseaseKey})`;
+
+            let symptomsHTML = '<ul>';
+            info.symptoms.forEach(s => symptomsHTML += `<li>${s}</li>`);
+            symptomsHTML += '</ul>';
+
+            let causesHTML = '<ul>';
+            info.causes.forEach(c => causesHTML += `<li>${c}</li>`);
+            causesHTML += '</ul>';
+
+            modalBody.innerHTML = `
+                <h3>📋 Mô tả</h3>
+                <p>${info.description}</p>
+
+                <h3>🩺 Triệu chứng</h3>
+                ${symptomsHTML}
+
+                <h3>🔬 Nguyên nhân</h3>
+                ${causesHTML}
+
+                <h3>💊 Điều trị</h3>
+                <p>${info.treatment}</p>
+
+                <div class="warning-box">
+                    <strong>⚠️ Lưu ý:</strong> Thông tin này chỉ mang tính chất tham khảo. 
+                    Vui lòng tham khảo ý kiến bác sĩ để được chẩn đoán và điều trị chính xác.
+                </div>
+
+                <a href="${info.link}" target="_blank" class="info-link">
+                    📖 Đọc thêm thông tin chi tiết
+                </a>
+            `;
+
+            modal.style.display = 'block';
+        }
+
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorMsg.style.display = 'block';
+        }
+
+        function showSuccess(msg) {
+            successMsg.textContent = msg;
+            successMsg.style.display = 'block';
+            setTimeout(() => hideSuccess(), 3000);
+        }
+
+        function hideError() {
+            errorMsg.style.display = 'none';
+        }
+
+        function hideSuccess() {
+            successMsg.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
